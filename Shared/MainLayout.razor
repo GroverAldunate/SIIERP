@@ -1,0 +1,237 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager _navMan
+
+<style>
+    /* the size of the containers will fill up their parents up to the viewport */
+    html, body, app, .k-drawer-container, .k-drawer-content, .main {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+    }
+
+    /* vertical scroll should happen in the main portion of the content - where the Body is
+    This keeps the header sticky at the top
+    */
+    .main {
+        overflow-y: auto;
+    }
+
+    /* horizontal scroll happens in the drawer content to keep the drawer on the left side of the screen */
+    .k-drawer-content {
+        overflow-x: auto;
+    }
+
+    /* sizing of the header */
+    .top-row {
+        left: 0;
+    }
+
+    /* expand-collapse button for the drawer - position above the header */
+    .drawer-hamburger {
+        position: absolute;
+        z-index: 2;
+    }
+
+    /* There are some CSS rules from the default site.css related to the sidenav that are commented out
+    Some of the other rules there define parts of the layout too (like the header rules, or the .main rules
+    In your app, use the height and overflow settings above as guidelines and implement the rest of the layout according to your case
+    */
+</style>
+
+
+
+<TelerikRootComponent>
+    <div class="sidebar">
+        <TelerikDrawer @ref="@DrawerRef" Data="@NavigablePages" MiniMode="false" Mode="@DrawerMode.Push" TItem="DrawerItem" SelectedItemChanged="@OnItemSelect" @bind-Expanded="@Expanded">
+        <Template>
+        <div class="custom-toolbar">
+        <TelerikButton OnClick="@ToggleDrawer" Icon="menu" FillMode="@(ThemeConstants.Button.FillMode.Flat)"></TelerikButton>
+        </div>
+        <div class="k-drawer-items" role="menubar" aria-orientation="vertical">
+            <ul>
+                @foreach (var item in context)
+                {
+                    var selectedClass = item == SelectedItem ? "k-selected" : string.Empty;
+                    <li @onclick="@(() => OnItemSelect(item))" class="k-drawer-item @selectedClass k-level-@(item.Level)">
+                        <TelerikIcon Icon="@item.Icon"></TelerikIcon>
+                        <span class="k-item-text">@item.Text</span>
+
+                        @if (item.Expanded && (item.Children?.Any() ?? false))
+                        {
+                            <span class="k-icon k-i-arrow-chevron-down" style="position:absolute; right:0; line-height: inherit; margin: 0 8px"></span>
+                        }
+                        else if (!item.Expanded && (item.Children?.Any() ?? false))
+                        {
+                            <span class="k-icon k-i-arrow-chevron-right" style="position:absolute; right:0; line-height: inherit; margin: 0 8px"></span>
+                        }
+                    </li>
+                }
+                
+            </ul>
+        </div>        
+    </Template>
+    <DrawerContent>
+        <TelerikToolBar Class="toolbar-size">
+            <ToolBarButton OnClick="@ToggleDrawer" Icon="menu" FillMode="@(ThemeConstants.Button.FillMode.Flat)"></ToolBarButton>
+            <ToolBarButton Icon="undo">Undo</ToolBarButton>
+            <ToolBarButton Icon="redo">Redo</ToolBarButton>
+            <ToolBarSeparator></ToolBarSeparator>
+            <ToolBarToggleButton Icon="apply-format"></ToolBarToggleButton>
+            <ToolBarSeparator></ToolBarSeparator>
+            <ToolBarButtonGroup SelectionMode="@ButtonGroupSelectionMode.Multiple">
+            <ToolBarToggleButton @bind-Selected="@BoldSelected" Icon="bold"></ToolBarToggleButton>
+            <ToolBarToggleButton Icon="italic"></ToolBarToggleButton>
+            <ToolBarToggleButton Icon="underline"></ToolBarToggleButton>
+            </ToolBarButtonGroup>
+            <ToolBarSeparator></ToolBarSeparator>
+            <ToolBarSpacer></ToolBarSpacer>
+            <ToolBarTemplateItem>
+                <span class="k-textbox k-input k-input-solid k-rounded-md k-input-md">
+                    <input type="text" class="k-input-inner" placeholder="Search...">
+                    <span class="k-input-suffix">
+                        <span class="k-icon k-i-search"></span>
+                    </span>
+                </span>
+            </ToolBarTemplateItem>
+        </TelerikToolBar>
+        @Body
+    </DrawerContent>
+    </TelerikDrawer>
+    </div>
+</TelerikRootComponent>
+
+
+@code{
+    public bool BoldSelected { get; set; } = true;
+    bool DrawerExpanded { get; set; } = true;
+    DrawerItem SelectedItem { get; set; }
+    TelerikDrawer<DrawerItem> DrawerRef { get; set; }
+    TelerikDrawer<DrawerItem> RightDrawerRef { get; set; }
+    public bool Expanded { get; set; } = true;
+    bool collapseNavMenu = true;
+
+    string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    public async Task ToggleDrawer() => await DrawerRef.ToggleAsync();
+
+    public class DrawerItem
+    {
+        public string Text { get; set; }
+        public string Icon { get; set; }
+        public string Url { get; set; }
+        public int Level { get; set; }
+        public string Description { get; set; }
+        public bool IsSeparator { get; set; }
+        public bool Expanded { get; set; }
+        public IEnumerable<DrawerItem> Children { get; set; }
+    }
+
+    List<DrawerItem> NavigablePages { get; set; } = new List<DrawerItem>
+    {
+        new DrawerItem { Text = "Home", Url = "/", Icon = "home" },
+        new DrawerItem { IsSeparator = true, Url=string.Empty },//define a URL to separators to make the pre-selection logic easier
+        new DrawerItem { Text = "Counter", Url = "counter", Icon = "plus-outline" },
+        //new DrawerItem { Text = "FetchData", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "CONFIGURACION", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "INVENTARIO", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "VENTAS", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "CXC", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "CXP", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "CONTABILIDAD", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "HELPDESK", Url = "fetchdata", Icon = "grid" },
+        //new DrawerItem { Text = "SERVICIOS", Url = "fetchdata", Icon = "grid" },
+        new DrawerItem { Text = "CRM", Url = "count", Icon = "grid" },
+        new DrawerItem { Text = "ACTIVO FIJO", Url = "fetchdata", Icon = "grid" ,
+            Children = new List<DrawerItem>()
+            {
+                new DrawerItem { Text = "Catalogos", Icon = "grid", Level = 1, Description = "Item 1 del Grupo 3" },
+                new DrawerItem { Text = "Transacciones", Icon = "calendar-date", Level = 1, Description = "Item 2 del Grupo 3" },
+                new DrawerItem { Text = "Informes", Icon = "menu", Level = 1, Description = "Item 3 del Grupo 3" }
+            }
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        string currPage = _navMan.Uri;
+        DrawerItem ActivePage = NavigablePages.Where(p => p.Url.ToLowerInvariant() == GetCurrentPage().ToLowerInvariant()).FirstOrDefault();
+        if(ActivePage != null)
+        {
+            SelectedItem = ActivePage;
+        }
+        LoadFlatData();
+        SelectedItem = NavigablePages.First();
+        base.OnInitialized();
+    }
+
+    public string GetCurrentPage()
+    {
+        string uriWithoutQueryString = _navMan.Uri.Split("?")[0];
+        string currPage = uriWithoutQueryString.Substring(Math.Min(_navMan.Uri.Length, _navMan.BaseUri.Length));
+        return string.IsNullOrWhiteSpace(currPage) ? "/" : currPage;
+    }
+
+    public class TreeItem
+    {
+        public int Id { get; set; }
+        public string Text { get; set; }
+        public int? ParentIdValue { get; set; }
+        public bool HasChildren { get; set; }
+        public string Icon { get; set; }
+        public bool Expanded { get; set; }
+    }
+
+    public IEnumerable<TreeItem> FlatData { get; set; }
+    public IEnumerable<object> ExpandedItems { get; set; }
+
+    private void LoadFlatData()
+    {
+        List<TreeItem> items = new List<TreeItem>();
+        items.Add(new TreeItem(){Id = 1,Text = "Project",ParentIdValue = null,HasChildren = true,Icon = "folder"});
+        items.Add(new TreeItem(){Id = 2,Text = "Design",ParentIdValue = 1,HasChildren = true,Icon = "brush"});
+        items.Add(new TreeItem(){Id = 3,Text = "Implementation",ParentIdValue = 1,HasChildren = true,Icon = "folder" });
+        items.Add(new TreeItem(){Id = 4,Text = "site.psd",ParentIdValue = 2,HasChildren = false,Icon = "psd"});
+        items.Add(new TreeItem(){Id = 5,Text = "index.js",ParentIdValue = 3,HasChildren = false,Icon = "js"});
+        items.Add(new TreeItem(){Id = 6,Text = "index.html",ParentIdValue = 3,HasChildren = false,Icon = "html"});
+        items.Add(new TreeItem(){Id = 7,Text = "styles.css",ParentIdValue = 3,HasChildren = false,Icon = "css"});
+
+        FlatData = items;
+        ExpandedItems = items.Take(3);
+    }
+
+    ////---------------------------------------------------
+
+    
+
+
+    public void OnItemSelect(DrawerItem selectedItem)
+    {
+        SelectedItem = selectedItem;
+
+        selectedItem.Expanded = !selectedItem.Expanded;
+        var newData = new List<DrawerItem>();
+
+        foreach (var item in NavigablePages.Where(x => x.Level <= selectedItem.Level))
+        {
+            newData.Add(item);
+            if (item == selectedItem && selectedItem.Expanded && (item.Children?.Any() ?? false))
+            {
+                foreach (var child in item.Children)
+                {
+                    newData.Add(child);
+                }
+            }
+
+            if (item != selectedItem && !(item.Children?.Contains(selectedItem) ?? false))
+            {
+                item.Expanded = false;
+            }
+        }
+        NavigablePages = newData;
+    }
+}
